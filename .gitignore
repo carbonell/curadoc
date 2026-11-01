@@ -1,0 +1,21 @@
+# .NET build artifacts
+bin/
+obj/
+*.user
+*.suo
+*.db
+*.db-shm
+*.db-wal
+
+# Node / Frontend build artifacts
+node_modules/
+dist/
+.vite/
+*.local
+
+# IDE / OS files
+.vs/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
