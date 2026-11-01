@@ -7,8 +7,11 @@ public class CuraDocDbContext : DbContext
 {
     public CuraDocDbContext(DbContextOptions<CuraDocDbContext> options) : base(options) { }
 
+    public DbSet<AppUser> Users => Set<AppUser>();
+    public DbSet<Specialty> Specialties => Set<Specialty>();
     public DbSet<Clinic> Clinics => Set<Clinic>();
     public DbSet<Doctor> Doctors => Set<Doctor>();
+    public DbSet<DoctorApplication> DoctorApplications => Set<DoctorApplication>();
     public DbSet<InsuranceProvider> InsuranceProviders => Set<InsuranceProvider>();
     public DbSet<DoctorScheduleSlot> ScheduleSlots => Set<DoctorScheduleSlot>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
@@ -16,6 +19,21 @@ public class CuraDocDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<AppUser>(entity =>
+        {
+            entity.HasKey(u => u.Id);
+            entity.HasIndex(u => u.Email).IsUnique();
+            entity.Property(u => u.Email).IsRequired().HasMaxLength(150);
+            entity.Property(u => u.FullName).IsRequired().HasMaxLength(150);
+        });
+
+        modelBuilder.Entity<Specialty>(entity =>
+        {
+            entity.HasKey(s => s.Id);
+            entity.HasIndex(s => s.Name).IsUnique();
+            entity.Property(s => s.Name).IsRequired().HasMaxLength(100);
+        });
 
         modelBuilder.Entity<Clinic>(entity =>
         {
@@ -38,6 +56,30 @@ public class CuraDocDbContext : DbContext
                   .WithMany(c => c.Doctors)
                   .HasForeignKey(d => d.ClinicId)
                   .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<DoctorApplication>(entity =>
+        {
+            entity.HasKey(da => da.Id);
+            entity.Property(da => da.FullName).IsRequired().HasMaxLength(150);
+            entity.Property(da => da.Email).IsRequired().HasMaxLength(150);
+            entity.Property(da => da.ExequaturNumber).IsRequired().HasMaxLength(64);
+            entity.Property(da => da.IdentityDocumentNumber).IsRequired().HasMaxLength(64);
+            entity.Property(da => da.ProposedConsultationRate).HasPrecision(10, 2);
+            entity.Property(da => da.ProposedStandardCopay).HasPrecision(10, 2);
+
+            entity.HasOne(da => da.PreferredClinic)
+                  .WithMany()
+                  .HasForeignKey(da => da.PreferredClinicId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<InsuranceProvider>(entity =>
+        {
+            entity.HasKey(i => i.Id);
+            entity.Property(i => i.Name).IsRequired().HasMaxLength(150);
+            entity.Property(i => i.PlanName).IsRequired().HasMaxLength(150);
+            entity.Property(i => i.DefaultNetworkDiscount).HasPrecision(10, 2);
         });
 
         modelBuilder.Entity<Appointment>(entity =>

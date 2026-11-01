@@ -20,11 +20,53 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Ensure SQLite database is created and seeded with the mockup data
+// Ensure SQLite database is created and seeded with the mockup + backoffice data
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<CuraDocDbContext>();
     db.Database.EnsureCreated();
+
+    if (!db.Users.Any())
+    {
+        db.Users.AddRange(
+            new AppUser
+            {
+                Email = "admin@curadoc.com",
+                FullName = "CuraDoc Super Admin",
+                PasswordHash = "Admin123!",
+                Role = UserRole.SuperAdmin
+            },
+            new AppUser
+            {
+                Email = "alex.morgan@email.com",
+                FullName = "Alex Morgan",
+                PasswordHash = "Patient123!",
+                Role = UserRole.Patient
+            }
+        );
+    }
+
+    if (!db.Specialties.Any())
+    {
+        db.Specialties.AddRange(
+            new Specialty { Name = "Cardiology", Description = "Heart and cardiovascular system specialists", IconCode = "heart", IsActive = true },
+            new Specialty { Name = "Dermatology", Description = "Skin, hair, and nail conditions", IconCode = "sparkles", IsActive = true },
+            new Specialty { Name = "Pediatrics", Description = "Medical care for infants, children, and adolescents", IconCode = "baby", IsActive = true },
+            new Specialty { Name = "Orthopedics", Description = "Musculoskeletal system, bones, and joints", IconCode = "bone", IsActive = true },
+            new Specialty { Name = "Psychiatry", Description = "Mental health and behavioral disorders", IconCode = "brain", IsActive = true }
+        );
+    }
+
+    if (!db.InsuranceProviders.Any())
+    {
+        db.InsuranceProviders.AddRange(
+            new InsuranceProvider { Name = "BlueCross BlueShield", PlanName = "BCBS PPO Tier 1", DefaultNetworkDiscount = 175.00m, IsActive = true },
+            new InsuranceProvider { Name = "Aetna Health", PlanName = "Aetna Open Choice PPO", DefaultNetworkDiscount = 160.00m, IsActive = true },
+            new InsuranceProvider { Name = "UnitedHealthcare", PlanName = "UHC Choice Plus", DefaultNetworkDiscount = 170.00m, IsActive = true },
+            new InsuranceProvider { Name = "Cigna", PlanName = "Cigna OAP", DefaultNetworkDiscount = 155.00m, IsActive = true }
+        );
+    }
+
     if (!db.Clinics.Any())
     {
         var nwClinic = new Clinic
@@ -76,6 +118,9 @@ using (var scope = app.Services.CreateScope())
             IsTopRated = true,
             AverageRating = 4.96m,
             VerifiedReviewCount = 428,
+            ExequaturNumber = "EXQ-2014-8821",
+            IdentityDocumentNumber = "001-1492831-9",
+            LinkedInUrl = "https://linkedin.com/in/dr-sarah-jenkins-md",
             ConsultationRate = 220.00m,
             StandardCopay = 45.00m,
             SelfPayRate = 180.00m,
@@ -94,6 +139,9 @@ using (var scope = app.Services.CreateScope())
             IsTopRated = false,
             AverageRating = 4.80m,
             VerifiedReviewCount = 218,
+            ExequaturNumber = "EXQ-2017-4410",
+            IdentityDocumentNumber = "001-8837120-4",
+            LinkedInUrl = "https://linkedin.com/in/dr-marcus-vance-md",
             ConsultationRate = 210.00m,
             StandardCopay = 45.00m,
             SelfPayRate = 175.00m,
@@ -102,6 +150,27 @@ using (var scope = app.Services.CreateScope())
         };
 
         db.Doctors.AddRange(drJenkins, drVance);
+
+        db.DoctorApplications.Add(new DoctorApplication
+        {
+            FullName = "Dr. Elena Rostova",
+            Email = "elena.rostova@cardioinstitute.org",
+            PhoneNumber = "+1 (312) 555-0177",
+            Credentials = "MD, PhD",
+            PrimarySpecialty = "Cardiology",
+            SubSpecialty = "Preventative Cardiology & Lipidology",
+            Gender = "Female",
+            ExequaturNumber = "EXQ-2019-9941",
+            IdentityDocumentNumber = "001-2938471-2",
+            LinkedInUrl = "https://linkedin.com/in/dr-elena-rostova",
+            InstagramOrXUrl = "https://x.com/drelenarostova",
+            WebsiteOrResearchGateUrl = "https://researchgate.net/profile/Elena-Rostova",
+            PreferredClinic = nwClinic,
+            ProposedConsultationRate = 230.00m,
+            ProposedStandardCopay = 40.00m,
+            Status = DoctorApplicationStatus.Pending
+        });
+
         db.SaveChanges();
     }
 }

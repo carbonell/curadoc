@@ -1,10 +1,132 @@
 using CuraDoc.Api.Application.DTOs;
 using CuraDoc.Api.Domain.Entities;
+using CuraDoc.Api.Infrastructure.Auth;
 using CuraDoc.Api.Infrastructure.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace CuraDoc.Api.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class AuthController : ControllerBase
+{
+    private readonly CuraDocDbContext _db;
+
+    public AuthController(CuraDocDbContext db) => _db = db;
+
+    [HttpPost("login")]
+    public async Task<ActionResult<AuthLoginResponse>> Login([FromBody] AuthLoginRequest request)
+    {
+        var email = request.Email.Trim().ToLower();
+        var user = await _db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Email.ToLower() == email);
+        if (user == null || user.PasswordHash != request.Password)
+        {
+            return Unauthorized(new { message = "Invalid email or password." });
+        }
+
+        var token = SimpleTokenService.CreateToken(user);
+        return Ok(new AuthLoginResponse(user.Id, user.Email, user.FullName, user.Role, token));
+    }
+}
+
+[ApiController]
+[Route("api/[controller]")]
+public class DoctorApplicationsController : ControllerBase
+{
+    private readonly CuraDocDbContext _db;
+
+    public DoctorApplicationsController(CuraDocDbContext db) => _db = db;
+
+    [HttpPost]
+    public async Task<ActionResult<DoctorApplicationDto>> SubmitApplication([FromBody] CreateDoctorApplicationRequest request)
+    {
+        var clinic = await _db.Clinics.AsNoTracking().FirstOrDefaultAsync(c => c.Id == request.PreferredClinicId);
+        if (clinic == null)
+        {
+            return BadRequest(new { message = "Selected preferred clinic does not exist." });
+        }
+
+        var app = new DoctorApplication
+        {
+            FullName = request.FullName,
+            Email = request.Email,
+            PhoneNumber = request.PhoneNumber,
+            Credentials = request.Credentials,
+            PrimarySpecialty = request.PrimarySpecialty,
+            SubSpecialty = request.SubSpecialty,
+            Gender = request.Gender,
+            ExequaturNumber = request.ExequaturNumber,
+            IdentityDocumentNumber = request.IdentityDocumentNumber,
+            LinkedInUrl = request.LinkedInUrl,
+            InstagramOrXUrl = request.InstagramOrXUrl,
+            WebsiteOrResearchGateUrl = request.WebsiteOrResearchGateUrl,
+            PreferredClinicId = request.PreferredClinicId,
+            ProposedConsultationRate = request.ProposedConsultationRate,
+            ProposedStandardCopay = request.ProposedStandardCopay,
+            Status = DoctorApplicationStatus.Pending
+        };
+
+        _db.DoctorApplications.Add(app);
+        await _db.SaveChangesAsync();
+
+        return CreatedAtAction(nameof(GetApplicationStatus), new { id = app.Id }, new DoctorApplicationDto(
+            app.Id, app.FullName, app.Email, app.PhoneNumber, app.Credentials, app.PrimarySpecialty,
+            app.SubSpecialty, app.Gender, app.ExequaturNumber, app.IdentityDocumentNumber,
+            app.LinkedInUrl, app.InstagramOrXUrl, app.WebsiteOrResearchGateUrl,
+            app.PreferredClinicId, clinic.Name, app.ProposedConsultationRate, app.ProposedStandardCopay,
+            app.Status, app.ReviewerNotes, app.CreatedAt, app.ReviewedAt, app.ReviewedByEmail, app.ApprovedDoctorId
+        ));
+    }
+
+    [HttpGet("{id:guid}")]
+    public async Task<ActionResult<DoctorApplicationDto>> GetApplicationStatus(Guid id)
+    {
+        var a = await _db.DoctorApplications.Include(x => x.PreferredClinic).AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
+        if (a == null) return NotFound();
+
+        return Ok(new DoctorApplicationDto(
+            a.Id, a.FullName, a.Email, a.PhoneNumber, a.Credentials, a.PrimarySpecialty,
+            a.SubSpecialty, a.Gender, a.ExequaturNumber, a.IdentityDocumentNumber,
+            a.LinkedInUrl, a.InstagramOrXUrl, a.WebsiteOrResearchGateUrl,
+            a.PreferredClinicId, a.PreferredClinic?.Name ?? "N/A", a.ProposedConsultationRate, a.ProposedStandardCopay,
+            a.Status, a.ReviewerNotes, a.CreatedAt, a.ReviewedAt, a.ReviewedByEmail, a.ApprovedDoctorId
+        ));
+    }
+}
+
+[ApiController]
+[Route("api/[controller]")]
+public class CatalogController : ControllerBase
+{
+    private readonly CuraDocDbContext _db;
+
+    public CatalogController(CuraDocDbContext db) => _db = db;
+
+    [HttpGet("specialties")]
+    public async Task<ActionResult<IEnumerable<SpecialtyDto>>> GetActiveSpecialties()
+    {
+        var items = await _db.Specialties
+            .AsNoTracking()
+            .Where(s => s.IsActive)
+            .OrderBy(s => s.Name)
+            .Select(s => new SpecialtyDto(s.Id, s.Name, s.Description, s.IconCode, s.IsActive))
+            .ToListAsync();
+        return Ok(items);
+    }
+
+    [HttpGet("insurances")]
+    public async Task<ActionResult<IEnumerable<InsuranceProviderDto>>> GetActiveInsurances()
+    {
+        var items = await _db.InsuranceProviders
+            .AsNoTracking()
+            .Where(i => i.IsActive)
+            .OrderBy(i => i.Name)
+            .Select(i => new InsuranceProviderDto(i.Id, i.Name, i.PlanName, i.DefaultNetworkDiscount, i.IsActive))
+            .ToListAsync();
+        return Ok(items);
+    }
+}
 
 [ApiController]
 [Route("api/[controller]")]
@@ -66,6 +188,11 @@ public class DoctorsController : ControllerBase
             d.StandardCopay,
             d.SelfPayRate,
             d.NextAvailableSlot,
+            d.ExequaturNumber,
+            d.IdentityDocumentNumber,
+            d.LinkedInUrl,
+            d.InstagramOrXUrl,
+            d.WebsiteOrResearchGateUrl,
             new ClinicSummaryDto(
                 d.Clinic!.Id,
                 d.Clinic.Name,
@@ -98,6 +225,7 @@ public class DoctorsController : ControllerBase
             d.Id, d.FullName, d.Credentials, d.PrimarySpecialty, d.SubSpecialty,
             d.IsBoardCertified, d.IsTopRated, d.AverageRating, d.VerifiedReviewCount,
             d.ConsultationRate, d.StandardCopay, d.SelfPayRate, d.NextAvailableSlot,
+            d.ExequaturNumber, d.IdentityDocumentNumber, d.LinkedInUrl, d.InstagramOrXUrl, d.WebsiteOrResearchGateUrl,
             new ClinicSummaryDto(
                 d.Clinic.Id, d.Clinic.Name, d.Clinic.StreetAddress, d.Clinic.City, d.Clinic.State,
                 d.Clinic.ZipCode, d.Clinic.PhoneNumber, d.Clinic.BadgeLabel, d.Clinic.AverageRating,
@@ -134,6 +262,23 @@ public class ClinicsController : ControllerBase
     private readonly CuraDocDbContext _db;
 
     public ClinicsController(CuraDocDbContext db) => _db = db;
+
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<ClinicSummaryDto>>> GetAllClinics()
+    {
+        var clinics = await _db.Clinics
+            .AsNoTracking()
+            .OrderBy(c => c.Name)
+            .Select(c => new ClinicSummaryDto(
+                c.Id, c.Name, c.StreetAddress, c.City, c.State, c.ZipCode,
+                c.PhoneNumber, c.BadgeLabel, c.AverageRating, c.ReviewCount,
+                c.AvailableSlotsToday, c.HasParkingValidation, c.IsAdaCompliant,
+                c.Latitude, c.Longitude
+            ))
+            .ToListAsync();
+
+        return Ok(clinics);
+    }
 
     [HttpGet("featured")]
     public async Task<ActionResult<IEnumerable<ClinicSummaryDto>>> GetFeaturedClinics()

@@ -10,6 +10,42 @@ export enum AppointmentStatus {
   Completed = 4,
 }
 
+export enum DoctorApplicationStatus {
+  Pending = 1,
+  Approved = 2,
+  Rejected = 3,
+}
+
+export enum UserRole {
+  Patient = 1,
+  Doctor = 2,
+  SuperAdmin = 3,
+}
+
+export interface AuthSession {
+  userId: string;
+  email: string;
+  fullName: string;
+  role: UserRole;
+  accessToken: string;
+}
+
+export interface SpecialtyItem {
+  id: string;
+  name: string;
+  description?: string;
+  iconCode?: string;
+  isActive: boolean;
+}
+
+export interface InsuranceProviderItem {
+  id: string;
+  name: string;
+  planName: string;
+  defaultNetworkDiscount: number;
+  isActive: boolean;
+}
+
 export interface ClinicSummary {
   id: string;
   name: string;
@@ -42,7 +78,56 @@ export interface DoctorCard {
   standardCopay: number;
   selfPayRate: number;
   nextAvailableSlot?: string;
+  exequaturNumber?: string;
+  identityDocumentNumber?: string;
+  linkedInUrl?: string;
+  instagramOrXUrl?: string;
+  websiteOrResearchGateUrl?: string;
   clinic: ClinicSummary;
+}
+
+export interface CreateDoctorApplicationPayload {
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  credentials: string;
+  primarySpecialty: string;
+  subSpecialty?: string;
+  gender?: string;
+  exequaturNumber: string;
+  identityDocumentNumber: string;
+  linkedInUrl?: string;
+  instagramOrXUrl?: string;
+  websiteOrResearchGateUrl?: string;
+  preferredClinicId: string;
+  proposedConsultationRate: number;
+  proposedStandardCopay: number;
+}
+
+export interface DoctorApplicationItem {
+  id: string;
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  credentials: string;
+  primarySpecialty: string;
+  subSpecialty?: string;
+  gender?: string;
+  exequaturNumber: string;
+  identityDocumentNumber: string;
+  linkedInUrl?: string;
+  instagramOrXUrl?: string;
+  websiteOrResearchGateUrl?: string;
+  preferredClinicId: string;
+  preferredClinicName: string;
+  proposedConsultationRate: number;
+  proposedStandardCopay: number;
+  status: DoctorApplicationStatus;
+  reviewerNotes?: string;
+  createdAt: string;
+  reviewedAt?: string;
+  reviewedByEmail?: string;
+  approvedDoctorId?: string;
 }
 
 export interface ScheduleSlot {

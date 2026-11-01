@@ -1,7 +1,23 @@
-import React from 'react';
-import { Link, Outlet } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, Outlet, useNavigate } from 'react-router-dom';
+import { authStore } from '../services/curaDocApi';
+import { AuthSession, UserRole } from '../types/models';
 
 export const MainLayout: React.FC = () => {
+  const navigate = useNavigate();
+  const [session, setSession] = useState<AuthSession | null>(authStore.getSession());
+
+  useEffect(() => {
+    const sync = () => setSession(authStore.getSession());
+    window.addEventListener('curadoc-auth-change', sync);
+    return () => window.removeEventListener('curadoc-auth-change', sync);
+  }, []);
+
+  const handleSignOut = () => {
+    authStore.setSession(null);
+    navigate('/');
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
       <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
@@ -16,12 +32,31 @@ export const MainLayout: React.FC = () => {
             </Link>
             <Link to="/doctors?specialty=Cardiology">Specialties</Link>
             <Link to="/#clinics">Clinics &amp; Centers</Link>
+            <Link to="/for-doctors/apply" className="text-emerald-800 font-semibold">
+              For Doctors (Apply)
+            </Link>
+            {session?.role === UserRole.SuperAdmin && (
+              <Link to="/backoffice" className="bg-emerald-900 text-white px-3 py-1.5 rounded-md text-xs font-bold">
+                SuperAdmin Backoffice
+              </Link>
+            )}
           </nav>
         </div>
         <div className="flex items-center gap-4 text-sm font-medium">
-          <Link to="/sign-in" className="text-slate-700 hover:text-emerald-800">
-            Sign In
-          </Link>
+          {session ? (
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-slate-600">
+                {session.fullName} ({session.role === UserRole.SuperAdmin ? 'SuperAdmin' : 'Patient'})
+              </span>
+              <button onClick={handleSignOut} className="text-xs text-rose-700 font-semibold">
+                Sign Out
+              </button>
+            </div>
+          ) : (
+            <Link to="/sign-in" className="text-slate-700 hover:text-emerald-800">
+              Sign In
+            </Link>
+          )}
         </div>
       </header>
 

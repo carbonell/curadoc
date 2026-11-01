@@ -6,6 +6,8 @@ import { DoctorSearchPage } from './pages/DoctorSearchPage';
 import { BookConsultationPage } from './pages/BookConsultationPage';
 import { AppointmentConfirmationPage } from './pages/AppointmentConfirmationPage';
 import { SignInPage } from './pages/SignInPage';
+import { DoctorSignUpPage } from './pages/DoctorSignUpPage';
+import { BackofficePage } from './pages/BackofficePage';
 
 export const App: React.FC = () => {
   return (
@@ -16,6 +18,8 @@ export const App: React.FC = () => {
           <Route path="/doctors" element={<DoctorSearchPage />} />
           <Route path="/book/:doctorId" element={<BookConsultationPage />} />
           <Route path="/appointments/:code" element={<AppointmentConfirmationPage />} />
+          <Route path="/for-doctors/apply" element={<DoctorSignUpPage />} />
+          <Route path="/backoffice" element={<BackofficePage />} />
           <Route path="/sign-in" element={<SignInPage />} />
         </Route>
       </Routes>
